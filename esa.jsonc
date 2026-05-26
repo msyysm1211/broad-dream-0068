@@ -1,6 +1,7 @@
 {
   "name": "next-react-template",
+  "installCommand": "npm install",
   "assets": {
-    "directory": "./.open-next/assets"
-  }
+    "directory": "./.open-next/assets",
+  },
 }
