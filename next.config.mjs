@@ -1,7 +1,3 @@
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
@@ -9,7 +5,9 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   images: {
     loader: 'custom',
-    loaderFile: require.resolve('@ali/pcg-cli/runtime/pcg-image-loader.js'),
+    // `pcg build` 启动时把 @ali/pcg-cli 自带的 loader 复制到
+    // node_modules/.pcg/ 下,项目根 / package.json 都不需要改。
+    loaderFile: 'node_modules/.pcg/pcg-image-loader.js',
   },
 };
 
