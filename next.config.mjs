@@ -1,3 +1,7 @@
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
@@ -5,7 +9,7 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   images: {
     loader: 'custom',
-    loaderFile: './pcg-image-loader.js',
+    loaderFile: require.resolve('@ali/pcg-cli/runtime/pcg-image-loader.js'),
   },
 };
 
