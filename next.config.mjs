@@ -3,6 +3,10 @@ const nextConfig = {
   output: "standalone",
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
+  // 允许 middleware.ts 使用 Node.js 运行时（写文件、用 fs 等）
+  experimental: {
+    nodeMiddleware: true,
+  },
   // images: {
   //   loader: 'custom',
   //   // `pcg build` 启动时把 @ali/pcg-cli 自带的 loader 复制到
