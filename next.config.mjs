@@ -6,6 +6,9 @@ const nextConfig = {
   // 允许 middleware.ts 使用 Node.js 运行时（写文件、用 fs 等）
   experimental: {
     nodeMiddleware: true,
+    serverActions: {
+      allowedOrigins: ['edgeserver.efc.alicdn-test.com', 'test.efc.alicdn-test.com'],
+    },
   },
   // images: {
   //   loader: 'custom',
