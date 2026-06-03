@@ -2,17 +2,19 @@
  * 统一日志工具：同时输出 stdout/stderr 与 Pod 内文件
  *
  * 环境变量：
- *   LOG_LEVEL    debug | info | warn | error  （默认 info）
- *   LOG_TO_FILE  true | false                （默认 true）
- *   LOG_DIR      日志目录                     （默认 /var/log/app，不可写时回退到 ./logs）
- *   LOG_FILE     日志文件名                   （默认 app.log）
- *   SERVICE_NAME 服务名，用于日志字段          （默认 next-app）
+ *   LOG_LEVEL          debug | info | warn | error  （默认 info）
+ *   LOG_TO_FILE        true | false                （默认 true）
+ *   LOG_DIR            日志目录                     （默认 /var/log/app，不可写时回退到 ./logs）
+ *   LOG_FILE           日志文件名                   （默认 app.log）
+ *   SERVICE_NAME       服务名，用于日志字段          （默认 next-app）
+ *   LOG_PATCH_CONSOLE  true | false                （默认 true，劫持全局 console.* 让所有日志同时落文件）
  *
  * 仅在 Node.js 运行时生效（middleware 需声明 runtime: 'nodejs'）。
  */
 
 import { appendFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { format as utilFormat } from 'node:util';
 import path from 'node:path';
 
 type Level = 'debug' | 'info' | 'warn' | 'error';
@@ -31,9 +33,20 @@ const CURRENT_LEVEL: Level =
 
 const SERVICE_NAME = process.env.SERVICE_NAME || 'next-app';
 const LOG_TO_FILE = (process.env.LOG_TO_FILE ?? 'true') !== 'false';
+const PATCH_CONSOLE = (process.env.LOG_PATCH_CONSOLE ?? 'true') !== 'false';
 const DEFAULT_DIR = process.env.LOG_DIR || '/var/log/app';
 const FALLBACK_DIR = path.resolve(process.cwd(), 'logs');
 const LOG_FILE = process.env.LOG_FILE || 'app.log';
+
+// 关键：保留原始 console 引用。logger 自身和劫持后的 console 都通过这些原始方法写 stdout，
+// 这样既不会无限递归，又能保证文件只写一次。
+const origConsole = {
+  log: console.log.bind(console),
+  info: console.info.bind(console),
+  warn: console.warn.bind(console),
+  error: console.error.bind(console),
+  debug: console.debug.bind(console),
+};
 
 let resolvedFilePath: string | null = null;
 let initPromise: Promise<void> | null = null;
@@ -57,14 +70,12 @@ async function initFileSink(): Promise<void> {
   }
   if (await ensureDir(FALLBACK_DIR)) {
     resolvedFilePath = path.join(FALLBACK_DIR, LOG_FILE);
-    // eslint-disable-next-line no-console
-    console.warn(
+    origConsole.warn(
       `[logger] LOG_DIR=${DEFAULT_DIR} 不可写，已回退到 ${FALLBACK_DIR}`
     );
     return;
   }
-  // eslint-disable-next-line no-console
-  console.warn('[logger] 文件日志初始化失败，仅输出到 stdout');
+  origConsole.warn('[logger] 文件日志初始化失败，仅输出到 stdout');
 }
 
 function ensureInit(): Promise<void> {
@@ -82,7 +93,7 @@ interface LogPayload {
   [key: string]: unknown;
 }
 
-function format(payload: LogPayload): string {
+function formatJson(payload: LogPayload): string {
   return JSON.stringify({
     time: new Date().toISOString(),
     service: SERVICE_NAME,
@@ -97,23 +108,20 @@ async function writeFileLine(line: string): Promise<void> {
   try {
     await appendFile(resolvedFilePath, line + '\n', 'utf8');
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[logger] 写文件失败', err);
+    origConsole.error('[logger] 写文件失败', err);
   }
 }
 
 function emit(level: Level, msg: string, fields: Record<string, unknown> = {}): void {
   if (!shouldLog(level)) return;
-  const line = format({ level, msg, ...fields });
-  // 1. stdout / stderr：kubectl logs 直接可见
+  const line = formatJson({ level, msg, ...fields });
+  // 1. stdout / stderr：用原始 console，避免被劫持后再次落文件
   if (level === 'error' || level === 'warn') {
-    // eslint-disable-next-line no-console
-    console.error(line);
+    origConsole.error(line);
   } else {
-    // eslint-disable-next-line no-console
-    console.log(line);
+    origConsole.log(line);
   }
-  // 2. 文件落盘：异步 fire-and-forget，不阻塞请求
+  // 2. 文件落盘：异步 fire-and-forget
   if (LOG_TO_FILE) {
     void writeFileLine(line);
   }
@@ -127,3 +135,55 @@ export const logger = {
 };
 
 export type Logger = typeof logger;
+
+/**
+ * 全局劫持 console.*：让任何 console.log / console.error 等也同时写入日志文件。
+ * 通过 globalThis 标志位幂等，避免开发模式 HMR 多次劫持。
+ */
+const PATCH_FLAG = Symbol.for('app.logger.consolePatched');
+
+interface GlobalWithFlag {
+  [k: symbol]: unknown;
+}
+
+export function patchConsole(): void {
+  const g = globalThis as unknown as GlobalWithFlag;
+  if (g[PATCH_FLAG]) return;
+  g[PATCH_FLAG] = true;
+
+  const make = (level: Level) =>
+    (...args: unknown[]) => {
+      // 1. 原始 console 输出，保持 stdout 行为不变
+      origConsole[level === 'debug' ? 'debug' : level](...(args as []));
+      // 2. 落文件（按级别过滤）
+      if (LOG_TO_FILE && shouldLog(level)) {
+        const message = utilFormat(...(args as []));
+        void writeFileLine(
+          formatJson({ level, msg: 'console', source: 'console', message })
+        );
+      }
+    };
+
+  console.log = make('info');
+  console.info = make('info');
+  console.warn = make('warn');
+  console.error = make('error');
+  console.debug = make('debug');
+
+  origConsole.log(
+    formatJson({
+      level: 'info',
+      msg: 'logger_ready',
+      patchConsole: true,
+      logToFile: LOG_TO_FILE,
+      logDir: DEFAULT_DIR,
+      fallbackDir: FALLBACK_DIR,
+      level_: CURRENT_LEVEL,
+    })
+  );
+}
+
+// 模块加载即生效，确保任何路由/中间件 import logger 后立即拥有全局劫持能力。
+if (PATCH_CONSOLE) {
+  patchConsole();
+}
