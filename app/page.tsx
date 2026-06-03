@@ -3,7 +3,7 @@ export const revalidate = 600;
 export default function Home() {
   return (
     <main style={{ padding: "2rem" }}>
-      <h1>测试2！！！ 首页 (ISR — revalidate: 60s)</h1>
+      <h1>测试3！！！ 首页 (ISR — revalidate: 60s)</h1>
       <p>Next.js 15 + React 19</p>
       <p>构建时间: {new Date().toISOString()}</p>
       <p>本页面测试通过 Gateway OSS proxy 的 incremental cache 读写路径。</p>
