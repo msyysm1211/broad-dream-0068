@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 export const revalidate = 10;
 
 export default function Home() {
@@ -8,6 +10,16 @@ export default function Home() {
     ESA_CACHE_GW_ROUTINENAME: process.env.ESA_CACHE_GW_ROUTINENAME ?? '未设置',
     ESA_CACHE_GW_VERSION: process.env.ESA_CACHE_GW_VERSION ?? '未设置',
   };
+
+  const authKey = process.env.ESA_CACHE_GW_AUTH_KEY ?? '';
+  const aliuid = process.env.ESA_CACHE_GW_ALIUID ?? '';
+  const routinename = process.env.ESA_CACHE_GW_ROUTINENAME ?? '';
+  const version = process.env.ESA_CACHE_GW_VERSION ?? '';
+  const expires = Math.floor(Date.now() / 1000) + 3600; // 当前时间 +1h
+
+  const md5Hash = createHash('md5')
+    .update(`${authKey}${expires}${aliuid}${routinename}${version}`)
+    .digest('hex');
 
   return (
     <main style={{ padding: "2rem" }}>
@@ -62,6 +74,33 @@ export default function Home() {
             </tr>
           </tbody>
         </table>
+      </section>
+
+      <section
+        style={{
+          marginTop: "2rem",
+          padding: "1.5rem",
+          background: "#fff8e1",
+          borderRadius: "8px",
+          border: "1px solid #ffe082",
+        }}
+      >
+        <h2 style={{ margin: "0 0 1rem" }}>MD5 Hash 计算结果</h2>
+        <p style={{ fontSize: "0.85rem", color: "#666" }}>
+          公式: <code>md5(authKey + expires + aliuid + routinename + version)</code>
+        </p>
+        <p style={{ margin: "0.5rem 0" }}>
+          <strong>expires:</strong> <code>{expires}</code>
+        </p>
+        <p style={{ margin: "0.5rem 0" }}>
+          <strong>拼接字符串:</strong> <code style={{ wordBreak: "break-all" }}>{`${authKey}${expires}${aliuid}${routinename}${version}`}</code>
+        </p>
+        <p style={{ margin: "0.5rem 0" }}>
+          <strong>MD5 Hash:</strong>{" "}
+          <code style={{ background: "#fff", padding: "0.25rem 0.5rem", border: "1px solid #ccc", borderRadius: "4px" }}>
+            {md5Hash}
+          </code>
+        </p>
       </section>
 
       <section
