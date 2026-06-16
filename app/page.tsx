@@ -15,12 +15,17 @@ export default function Home() {
   const authKey = process.env.ESA_CACHE_GW_AUTH_KEY ?? "";
   const aliuid = process.env.ESA_CACHE_GW_ALIUID ?? "";
   const routinename = process.env.ESA_CACHE_GW_ROUTINENAME ?? "";
-  // const version = process.env.ESA_CACHE_GW_VERSION ?? "";
-  const version = 1781607766198054518;
-  // const expires = Math.floor(Date.now() / 1000) + 3600; // 当前时间 +1h
-  const expires = 1781608370700;
+  const version = process.env.ESA_CACHE_GW_VERSION ?? "";
+  // const version = ;
+  const expires = Math.floor(Date.now() / 1000) + 3600; // 当前时间 +1h
+  // const expires = 1781608370700;
   const md5Hash = createHash("md5")
     .update(`${authKey}${expires}${aliuid}${routinename}${version}`)
+    .digest("hex");
+  const md5Hash2 = createHash("md5")
+    .update(
+      `${String(authKey)}${String(expires)}${String(aliuid)}${String(routinename)}${String(version)}`,
+    )
     .digest("hex");
 
   return (
@@ -134,6 +139,19 @@ export default function Home() {
             }}
           >
             {md5Hash}
+          </code>
+        </p>
+        <p style={{ margin: "0.5rem 0" }}>
+          <strong>MD5 Hash2 string:</strong>{" "}
+          <code
+            style={{
+              background: "#fff",
+              padding: "0.25rem 0.5rem",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          >
+            {md5Hash2}
           </code>
         </p>
       </section>
