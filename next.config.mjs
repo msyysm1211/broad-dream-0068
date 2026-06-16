@@ -16,6 +16,14 @@ const nextConfig = {
   //   // node_modules/.pcg/ 下,项目根 / package.json 都不需要改。
   //   // loaderFile: 'node_modules/.pcg/pcg-image-loader.js',
   // },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
 };
 
 export default nextConfig;
