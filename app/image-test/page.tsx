@@ -20,7 +20,7 @@ export default function ImageTestPage() {
       <section style={{ marginBottom: '2rem' }}>
         <h2>Responsive Image</h2>
         <Image
-          src="https://picsum.photos/id/237/1280/800"
+          src="https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png"
           alt="Responsive test image"
           width={640}
           height={400}
@@ -33,7 +33,7 @@ export default function ImageTestPage() {
         <h2>Multiple Sizes</h2>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <Image
-            src="https://picsum.photos/id/10/800/600"
+            src="https://gw.alipayobjects.com/zos/rmsportal/ODTLcjxAfvqbxHnVXCYX.png"
             alt="Medium test image"
             width={320}
             height={240}
@@ -41,7 +41,7 @@ export default function ImageTestPage() {
             style={{ borderRadius: '8px' }}
           />
           <Image
-            src="https://picsum.photos/id/20/800/600"
+            src="https://gw.alipayobjects.com/zos/rmsportal/fcHMVNCjPOsbUGdEduuv.jpeg"
             alt="Small test image"
             width={320}
             height={240}
